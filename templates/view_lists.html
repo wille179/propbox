@@ -17,55 +17,58 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE. -->
+
 <!doctype html>
 <html>
 <head>
 {% include 'templates/common.html' %}
-  <!-- QR-CODE reader import -->
-  <script type="text/javascript" src="/scripts/instascan.min.js"></script>
+
   <script>
     $(document).ready(function(){
-      $("#scanner_container").hide();
       SetUpNavBar(SetUpFirebase);
     });
-
-    var scanned_codes = [];
   </script>
 
-  <link rel="stylesheet" href="/stylesheets/check_in.css"> 
-  <script type="text/javascript" src="/scripts/scan_qr_code.js"></script>
-
-  <title>Check Out :: Prop Box</title>
+  <title>Lists :: Prop Box</title>
   <link rel="shortcut icon" type="image/png" href="/image/propboxicon_color.png" />
+  <link rel="stylesheet" href="/stylesheets/view_lists.css">
 </head>
 
 <body>
   <div id="navbar_holder">
     <div id="page_specific_breadcrumbs">
-      <span> Check Out Items </span>
+      <a href="/view_lists"> Lists </a>
     </div>
-  </div>
-  <!-- New content here -->
-  <div id="page-heading">
-    <h1>Check Out</h1>
-  </div>
-  <div id="body_div">
-    <button onclick="scanAndAddToList(scanned_codes)" class="submitButton">Scan QR code</button>
-    <div id="scanner_container">
-      <div id="scanner_tooltip">
-        Click anywhere to exit
-      </div>
-      <video id="scanner_window"></video>
-    </div>
-    <h2>Scanned Items</h2>
-    <ul id="scanned_list"></ul>
-    <form id="scanned_keys" action="/check_out" method="post">
-      Reason:
-      <br> <textarea  name="reason"></textarea>
-      <br> <button type="submit" class="submitButton"><i class="fa fa-sign-out" aria-hidden="true"></i> Check Out Scanned Items
-    </form>
   </div>
 
-  <div id="footer_holder"></div>
+  <div id="page-heading">
+    <h1>{% if user.permissions == "Standard user" %}Public{% else %}My{% endif %} Lists</h1>
+  </div>
+  <br>
+  <!-- All the lists -->
+  {% for l in lists %}
+  <div class="listview item_container">
+    <form action='/delete_list' method="post">
+      <a href="/view_list?list={{l.key.urlsafe()}}">{{ l.name }} ({{l.items | length}} items)</a> 
+      <input type="hidden" name="list" value="{{l.key.urlsafe()}}">
+      {% if user.permissions != "Standard user" %}
+      <button class="submitButton" type="submit"><i class="fa fa-trash fa-1x" aria-hidden="true"></i> Delete</button>{% endif %}
+    </form>
+    <p style="font-size: 0.8em">{% if l.public %}Public{% else %}Private{% endif %} List</p>
+  </div>
+  {% endfor %}
+  <!-- New list form -->
+  {% if user.permissions != "Standard user" %}
+  <div class="item_container">
+    <form action="/new_list" method="post">
+      <input type="text" name="name" placeholder="New List Name">
+      <input type="checkbox" name="public" value="public"> Make Public
+      <button class="submitButton" type="submit" style="margin-left: 0px"><i class="fa fa-plus-circle fa-1x"></i> Create New List</button>
+      <br>
+    </form>
+  </div>
+  {% endif %}
+  
+  <footer id="footer_holder"></footer>
 </body>
 </html>

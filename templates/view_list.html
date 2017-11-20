@@ -17,55 +17,46 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE. -->
+
 <!doctype html>
 <html>
 <head>
 {% include 'templates/common.html' %}
-  <!-- QR-CODE reader import -->
-  <script type="text/javascript" src="/scripts/instascan.min.js"></script>
+
   <script>
     $(document).ready(function(){
-      $("#scanner_container").hide();
       SetUpNavBar(SetUpFirebase);
     });
-
-    var scanned_codes = [];
   </script>
 
-  <link rel="stylesheet" href="/stylesheets/check_in.css"> 
-  <script type="text/javascript" src="/scripts/scan_qr_code.js"></script>
-
-  <title>Check Out :: Prop Box</title>
+  <title>{{list.name}} :: Prop Box</title>
   <link rel="shortcut icon" type="image/png" href="/image/propboxicon_color.png" />
+  <!-- <link rel="stylesheet" href="/stylesheets/index.css"> -->
+  <link rel="stylesheet" href="/stylesheets/list_dropdown.css">
 </head>
 
 <body>
   <div id="navbar_holder">
     <div id="page_specific_breadcrumbs">
-      <span> Check Out Items </span>
+      <a href="/view_lists"> Lists </a>
+      <span> {{list.name}} </span>
     </div>
   </div>
-  <!-- New content here -->
   <div id="page-heading">
-    <h1>Check Out</h1>
+    <h1> {{list.name}}</h1>
+    <p style="font-size: 0.9em; color: gray; text-align: center; margin: -25px auto; padding-bottom: 15px">{% if list.public %}Public{% else %}Private{% endif %} List</p>
   </div>
-  <div id="body_div">
-    <button onclick="scanAndAddToList(scanned_codes)" class="submitButton">Scan QR code</button>
-    <div id="scanner_container">
-      <div id="scanner_tooltip">
-        Click anywhere to exit
-      </div>
-      <video id="scanner_window"></video>
-    </div>
-    <h2>Scanned Items</h2>
-    <ul id="scanned_list"></ul>
-    <form id="scanned_keys" action="/check_out" method="post">
-      Reason:
-      <br> <textarea  name="reason"></textarea>
-      <br> <button type="submit" class="submitButton"><i class="fa fa-sign-out" aria-hidden="true"></i> Check Out Scanned Items
-    </form>
-  </div>
-
-  <div id="footer_holder"></div>
+  <br>
+  <br>
+  <form action="/print_qr_codes" method="get">
+    {% for item in items %}
+      <input type="hidden" name="keys" value="{{item.key.urlsafe()}}">
+    {% endfor %}
+    <input type="submit" value="Print QR codes" class="submitButton" style="margin-left: 5%;">
+  </form>
+  {% for item in items %}
+    {% include 'templates/item_template.html' %}
+  {% endfor %}
+  <footer id="footer_holder"></footer>
 </body>
 </html>

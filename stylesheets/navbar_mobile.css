@@ -47,3 +47,20 @@ SOFTWARE.*/
 #propbox_logo {
 	height: 7.5vh;
 }
+
+#navItems a {
+	min-height: 100%;
+    font-size: 1em;
+    margin-top: 0px;
+}
+
+#navItems li {
+	vertical-align: top;
+	min-height: 100%;
+	margin-top: 0px;
+	padding-top: 7px;
+}
+
+li i.fa {
+	font-size: 1.5em;
+}

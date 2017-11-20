@@ -33,6 +33,7 @@ class List(ndb.Model):
     name = ndb.StringProperty(required=True)
     owner = ndb.KeyProperty(required=True)
     items = ndb.KeyProperty(repeated=True)
+    public = ndb.BooleanProperty(default=False)
 
 
 class Item(ndb.Model):
@@ -54,6 +55,7 @@ class Item(ndb.Model):
     checked_out = ndb.BooleanProperty(default=False)
     checked_out_reason = ndb.StringProperty(default="")
     checked_out_by = ndb.StringProperty(default="")
+    checked_out_by_name = ndb.StringProperty(default="")
     #Newer Versions are children. Use Item.key.parent() to get older version.
     child = ndb.KeyProperty(required=False)
     #deleted is True if an item was deleted by a user but has not yet been purged from the system.
@@ -65,7 +67,6 @@ class Item(ndb.Model):
     suggested_edits = ndb.KeyProperty(required=False,repeated=True)
     is_suggestion = ndb.BooleanProperty(required=True, default=False)
     suggested_by = ndb.StringProperty(required=True, default="")
-    orphan = ndb.BooleanProperty(required=True, default=False)
 
 #Returns a clone of a given item.
 def cloneItem(oldItem, parentKey=None):
@@ -85,7 +86,8 @@ def cloneItem(oldItem, parentKey=None):
         tags=oldItem.tags,
         checked_out = oldItem.checked_out,
         checked_out_reason = oldItem.checked_out_reason,
-        checked_out_by = oldItem.checked_out_by)
+        checked_out_by = oldItem.checked_out_by,
+        checked_out_by_name = oldItem.checked_out_by_name)
 
 
 # +----------------------------+

@@ -81,6 +81,20 @@ SOFTWARE.*/
   text-align: right;
 }
 
+#navItems a {
+    border: 0;
+    color: #fff;
+    font-size: 1.5em;
+    margin: 6px 0;
+}
+
+#navItems span {
+    border: 0;
+    color: #fff;
+    font-size: 1.5em;
+    margin: 6px 0;
+}
+
 #userBar a {
   background-color: #45ad85;
   color: #fff;
@@ -120,13 +134,13 @@ SOFTWARE.*/
   padding: 0;
 }
 
-#navItems form input[type=submit] {
+/*#navItems form input[type=submit] {
   border: 0;
   color: #fff;
   font-size: 1.5em;
   margin: 6px 0;
   padding: 0.4em 2em;
-}
+}*/
 
 #navItems li input[type=submit] {
   background: none;
@@ -157,4 +171,10 @@ SOFTWARE.*/
 
 #footer #copyright {
   font-size: 1.2em;
+}
+
+@media only print {
+  #userBar, #navbar, #breadcrumb_bar, #footer {
+    display: none;
+  }
 }
