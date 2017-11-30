@@ -21,16 +21,18 @@ SOFTWARE.*/
 .item_image {
 	margin: 20px auto;
 	display: block;
-	width: 40vw;
+	max-width: 40vw;
+	max-height: 300px;
 }
 
 #item_details {
-	border-style: solid;
 	width: 55%;
 	margin: auto;
-	margin-top: 10px;
+	padding: 10px;
+	margin-top: 20px;
 	border-width: 1px;
 	border-radius: 5px 5px 5px 5px;
+	background-color: rgb(221,232,244);
 }
 
 #item_details, .buttons {
@@ -46,6 +48,7 @@ p {
 	width: 95%;
 	margin: auto;
 	text-align: left;
+	font-size: medium;
 }
 
 #description {

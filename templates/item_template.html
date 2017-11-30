@@ -1,21 +1,21 @@
 <div class="item_container" id="item_{{item.key.urlsafe()}}">
-    <h2>{{item.name}}</h2>
     <div style="min-width: 100%">
-        {% if item.image %}
+        {% if item.image_url %}
             <div class="thumbnail_container">
-                <a href="view_image?image_id={{item.key.urlsafe()}}">
-                <img src="view_image?image_id={{item.key.urlsafe()}}" alt="image of {{item.name}}" class="thumbnail" />
+                <a href="{{item.image_url}}">
+                <img src="{{item.image_url}}" alt="image of {{item.name}}" class="thumbnail" style="max-height: 300px"/>
                 </a>
             </div>
         {% endif %}
         <div class="item_details_container">
-            <h3>{{item.item_type}}</h3>
-            <h4>Created by {{item.creator_name}} at {{item.updated.strftime('%I:%M%p on %b %d, %Y').lstrip('0')}}</h4>
-            <p>{{item.description}}</p>
+            <h2>{{item.name}}</h2>
+            <p><b>Description:</b> {{item.description}} <br><br></p>
+            <p><b>Item Type:</b> {{item.item_type}}</p>
             <p><b>Condition</b>: {{item.condition}}</p>
-            <p><b>Article</b>: {{item.clothing_article_type}}</p>
-            <p><b>Tags</b>:{% for tag in item.tags %} {{tag}},{% endfor %}</p>
-            <p><b>Colors</b>: {% for color in item.item_color %} {{color}},{% endfor %}</p>
+            {% if not item.clothing_article_type == "N/A" %}<p><b>Article</b>: {{item.clothing_article_type}}</p>{% endif %}
+            {% if item.tags|length > 0 %}<p><b>Tags</b>:{% for tag in item.tags %} {{tag}},{% endfor %}</p>{% endif %}
+            {% if item.item_color|length > 0 %}<p><b>Colors</b>: {% for color in item.item_color %} {{color}},{% endfor %}</p>{% endif %}
+            {% if item.checked_out %}<br><p><b>Checked out by:</b> {{item.checked_out_by_name}}</p>{% endif %}
         </div>
     </div>
     <br/>
@@ -25,22 +25,22 @@
           <button type="submit" class="submitButton"> <i class='fa fa-info-circle fa-1x' aria-hidden='true'></i> Details</button>
         </form>
         <!-- Check in and out buttons -->
-        <button 
-            class="submitButton check_in_button" 
-            {% if item.checked_out == false %} 
-                style='display: none' 
-            {% endif %} 
+        <button
+            class="submitButton check_in_button"
+            {% if item.checked_out == false %}
+                style='display: none'
+            {% endif %}
             onclick="checkIn('{{item.key.urlsafe()}}')">
-            <i class='fa fa-sign-in fa-1x' aria-hidden='true'></i> 
+            <i class='fa fa-sign-in fa-1x' aria-hidden='true'></i>
             Check in
             </button>
-        <button 
-            class="submitButton check_out_button" 
-            {% if item.checked_out == true %} 
+        <button
+            class="submitButton check_out_button"
+            {% if item.checked_out == true %}
                 style='display: none'
-            {% endif %} 
+            {% endif %}
             onclick="showCheckOutPopup('{{item.key.urlsafe()}}')">
-            <i class='fa fa-sign-out fa-1x' aria-hidden='true'></i> 
+            <i class='fa fa-sign-out fa-1x' aria-hidden='true'></i>
             Check out
         </button>
         <div style='display: none' class="popup">
@@ -55,12 +55,12 @@
                     <!-- <ul> -->
                     {% for list in lists %}
                         <!-- <li> -->
-                        <label> <input 
-                            name="list" 
-                            type="checkbox" 
-                            value="{{list.key.urlsafe()}}" 
+                        <label> <input
+                            name="list"
+                            type="checkbox"
+                            value="{{list.key.urlsafe()}}"
                             {% if item.key in list.items %}
-                            checked 
+                            checked
                             {% endif %}
                             onchange="toggleListMembership(this, '{{list.key.urlsafe()}}', '{{item.key.urlsafe()}}')">  {{list.name}}</label>
                         <!-- </li> -->

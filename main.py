@@ -29,15 +29,18 @@ import json
 import logging
 import webapp2
 import jinja2
-from time import sleep
-
+# from time import sleep
 
 # +---------------------+
 # | Third party imports |
 # +---------------------+
 
+from google.appengine.api import app_identity
+from google.appengine.api import images
+from google.appengine.ext import blobstore
 from google.appengine.ext import ndb
 from google.appengine.ext.db import TransactionFailedError
+import cloudstorage as gcs
 
 
 # +---------------------+
@@ -72,8 +75,8 @@ class AddItem(webapp2.RequestHandler):
     @auth.login_required
     def get(self):
         user = get_current_user(self.request)
-        logging.info(user.permissions != wmodels.ADMIN)
-        if user.permissions != wmodels.TRUSTED_USER and user.permissions != wmodels.ADMIN:
+        # logging.info(user.permissions != wmodels.ADMIN)
+        if (user.permissions == wmodels.PENDING_USER or user.permissions == wmodels.DEACTIVATED_USER):
             self.redirect('/')
             return
         template = JINJA_ENVIRONMENT.get_template('templates/add_item.html')
@@ -98,15 +101,17 @@ class AddItem(webapp2.RequestHandler):
     @auth.login_required
     def post(self):
         user = get_current_user(self.request)
-        if user.permissions != wmodels.TRUSTED_USER and user.permissions != wmodels.ADMIN:
+        if (user.permissions == wmodels.PENDING_USER or user.permissions == wmodels.DEACTIVATED_USER):
             self.redirect('/')
             return
         try:
-            img = self.request.get('image', default_value='')
-            if img == '':
-                img = None
-            if img == None and self.request.get('duplicate') == "True":
-                img = ndb.Key(urlsafe=self.request.get('original_item')).get().image
+            image_data = self.request.get('image', default_value='')
+            image_url = ''
+            if image_data == '' and self.request.get('duplicate') == "True":
+                image_url = ndb.Key(urlsafe=self.request.get('original_item')).get().image_url
+            elif image_data != '':
+                image_url = saveImageInGCS(image_data)
+
             article_type = self.request.get('article')
             costume_or_prop = self.request.get('item_type')
             costume_size_number = self.request.get('clothing_size_number')
@@ -136,7 +141,7 @@ class AddItem(webapp2.RequestHandler):
                     creator_id=auth.get_user_id(self.request),
                     creator_name=auth.get_user_name(self.request),
                     name=self.request.get('name'),
-                    image=img,
+                    image_url=image_url,
                     item_type=costume_or_prop,
                     condition=self.request.get('condition'),
                     item_color=self.request.get_all('color'),
@@ -147,7 +152,7 @@ class AddItem(webapp2.RequestHandler):
                     clothing_size_string=costume_size_word,
                     tags=tags_list).put()
                 d = d - 1;
-                sleep(0.1)
+                #sleep(0.1)
 
             next_page = self.request.get("next_page")
             if next_page == "Make Another Item":
@@ -164,7 +169,7 @@ class EditItem(webapp2.RequestHandler):
     @auth.login_required
     def get(self):
         user = get_current_user(self.request)
-        if user.permissions != wmodels.TRUSTED_USER and user.permissions != wmodels.ADMIN:
+        if (user.permissions == wmodels.DEACTIVATED_USER or user.permissions == wmodels.PENDING_USER):
             self.redirect('/')
             return
         item_id = ndb.Key(urlsafe=self.request.get('item_id'))
@@ -179,7 +184,7 @@ class EditItem(webapp2.RequestHandler):
     @auth.login_required
     def post(self):
         user = get_current_user(self.request)
-        if user.permissions != wmodels.TRUSTED_USER and user.permissions != wmodels.ADMIN:
+        if (user.permissions == wmodels.DEACTIVATED_USER or user.permissions == wmodels.PENDING_USER):
             self.redirect('/')
             return
         user = get_current_user(self.request)
@@ -187,9 +192,10 @@ class EditItem(webapp2.RequestHandler):
         old_item_key = ndb.Key(urlsafe=self.request.get('old_item_key'))
         old_item = old_item_key.get()
         new_item = cloneItem(old_item, old_item_key)
-        img = self.request.get('image', default_value='')
-        if img != '':
-            new_item.image = img
+        image_data = self.request.get('image', default_value='')
+        image_url = ''
+        if image_data != '':
+            new_item.image_url = saveImageInGCS(image_data)
 
         new_item.creator_id = user.key.string_id()
         new_item.creator_name = user.name
@@ -237,7 +243,7 @@ class EditItem(webapp2.RequestHandler):
 
         try:
             new_item_key = commitEdit(old_item_key, new_item,suggestion=standard_user)
-            sleep(0.1)
+            #sleep(0.1)
             self.redirect("/item_details?" + urllib.urlencode({'item_id':(old_item_key if standard_user else new_item_key).urlsafe()}))
         except (ItemPurgedException, ItemDeletedException) as e:
             # TODO: Make this visible to the user.
@@ -261,19 +267,11 @@ class DeleteItem(webapp2.RequestHandler):
              # TODO: Expose this message to the user.
             logging.info('could not delete the item, please try again')
         # Redirect back to items view.
-        sleep(0.1)
+        #sleep(0.1)
         if user.permissions == "Standard user":
             self.redirect('/item_details?'+urllib.urlencode({'item_id':item_key.urlsafe()}))
         else:
             self.redirect("/search_and_browse")
-
-
-class ViewImage(webapp2.RequestHandler):
-    def get(self):
-        item_key = ndb.Key(urlsafe=self.request.get('image_id'))
-        item = item_key.get()
-        self.response.headers['Content-Type'] = 'image/png'
-        self.response.out.write(item.image)
 
 
 # Deletes an item from the database for good. THIS CANNOT BE UNDONE.
@@ -287,7 +285,7 @@ class DeleteItemForever(webapp2.RequestHandler):
         except TransactionFailedError as e:
              # TODO: Expose this message to the user.
             logging.info('could not purge the item, pelase try again')
-        sleep(0.1)
+        #sleep(0.1)
         self.redirect('/review_deletions')
 
 
@@ -301,7 +299,7 @@ class UndeleteItem(webapp2.RequestHandler):
         except TransactionFailedError as e:
              # TODO: Expose this message to the user.
             logging.info('could not un-delete the item, please try again')
-        sleep(0.1) #CUT FOR DEPLOYING
+        #sleep(0.1) #CUT FOR DEPLOYING
         self.redirect('/review_deletions')
 
 
@@ -370,7 +368,7 @@ class KeepRevision(webapp2.RequestHandler):
             return
         item = ndb.Key(urlsafe=self.request.get('item_id')).get()
         if self.request.get('proposed_edit') == "True":
-            logging.info("Accepting the proposed edit.")
+            # logging.info("Accepting the proposed edit.")
             parent = ndb.Key(urlsafe=self.request.get('parent_id')).get()
             parent.child = item.key
             for edit in parent.suggested_edits:
@@ -382,7 +380,7 @@ class KeepRevision(webapp2.RequestHandler):
             parent.put()
         item.approved = True
         item.put()
-        sleep(0.1)
+        #sleep(0.1)
         self.redirect('/review_edits')
 
 
@@ -412,7 +410,7 @@ class DiscardRevision(webapp2.RequestHandler):
             item.suggested_edits = []
             item.approved = True
             item.put()
-        sleep(0.1)
+        #sleep(0.1)
         self.redirect('/review_edits')
 
 
@@ -426,20 +424,20 @@ class RevertItem(webapp2.RequestHandler):
         item = ndb.Key(urlsafe=self.request.get('item_id')).get()
         item.approved = False
         item.put()
-        sleep(0.1)
+        #sleep(0.1)
         self.redirect('/review_edits')
 
 class ViewItemDetails(webapp2.RequestHandler):
     @auth.login_required
     def get(self):
-        logging.info("View Item Details")
+        # logging.info("View Item Details")
         user = get_current_user(self.request)
         template = JINJA_ENVIRONMENT.get_template('templates/item_details.html')
         item = ndb.Key(urlsafe=self.request.get('item_id')).get()
         pending_edit = (len(item.suggested_edits) > 0)
         lists = List.query(ndb.OR(List.owner == user.key, List.public == True)).fetch()
-        page = template.render({'item':item, 
-                                'pending_edit':pending_edit, 
+        page = template.render({'item':item,
+                                'pending_edit':pending_edit,
                                 'user':user,
                                 'lists':lists})
         page = page.encode('utf-8')
@@ -450,7 +448,7 @@ class ViewItemDetails(webapp2.RequestHandler):
 class ReviewDeletions(webapp2.RequestHandler):
     @auth.login_required
     def get(self):
-        logging.info("Manage Deletions")
+        # logging.info("Manage Deletions")
         user = get_current_user(self.request)
         if (user.permissions == "Standard user"):
             self.redirect('/')
@@ -488,6 +486,8 @@ class MainPage(webapp2.RequestHandler):
             costume_size_number_filter = self.request.get_all('filter_by_costume_size_number')
             tags_filter = self.request.get('filter_by_tags')
             tags_grouping_filter = self.request.get('filter_by_tag_grouping')
+            availability_filter = self.request.get('filter_by_availability')
+            user_id = auth.get_user_id(self.request)
 
 
             query = filterItems(
@@ -529,13 +529,15 @@ class MainPage(webapp2.RequestHandler):
 
             # send to display
             page = template.render({
-                'lists': lists, 
-                'user': user, 
-                'items': items, 
-                'item_type_filter': item_type_filter, 
-                'item_name_filter': item_name_filter, 
-                'item_condition_filter': item_condition_filter, 
-                'item_color_filter': item_color_filter})
+                'lists': lists,
+                'user': user,
+                'items': items,
+                'item_type_filter': item_type_filter,
+                'item_name_filter': item_name_filter,
+                'item_condition_filter': item_condition_filter,
+                'item_color_filter': item_color_filter,
+                'availability_filter': availability_filter,
+                'user_id': user_id})
             page = page.encode('utf-8')
             self.response.write(validateHTML(page))
 
@@ -544,11 +546,11 @@ class MainPage(webapp2.RequestHandler):
             # first time opening or item has been added
             query = Item.query()
             items = query.fetch()
-            logging.info(items)
+            # logging.info(items)
             page = template.render({
-                'lists': lists, 
-                'user': user, 
-                'items': items, 
+                'lists': lists,
+                'user': user,
+                'items': items,
                 'item_type_filter': item_type_filter})
             page = page.encode('utf-8')
             self.response.write(validateHTML(page))
@@ -651,7 +653,7 @@ class DeleteList(webapp2.RequestHandler):
             l.key.delete()
         elif l.owner == user.key:
             l.key.delete()
-            
+
         self.redirect('/view_lists')
 
 class ViewLists(webapp2.RequestHandler):
@@ -678,9 +680,19 @@ class ViewList(webapp2.RequestHandler):
             return
         items = [k.get() for k in l.items]
         template = JINJA_ENVIRONMENT.get_template('templates/view_list.html')
-        page = template.render({'list': l, 'items': items})
+        page = template.render({'list': l, 'items': items, 'user': user})
         page = page.encode('utf-8')
         self.response.write(validateHTML(page))
+
+class ChangeListPermissions(webapp2.RequestHandler):
+    @auth.login_required
+    def post(self):
+        user = get_current_user(self.request)
+        l = ndb.Key(urlsafe=self.request.get('list')).get()
+        if l.owner == user.key:
+            l.public = self.request.get('public') == 'public'
+            l.put()
+        self.redirect('/view_list?list=' + l.key.urlsafe())
 
 class AddToList(webapp2.RequestHandler):
     @auth.login_required
@@ -774,6 +786,17 @@ class CheckOut(webapp2.RequestHandler):
             item.put()
         self.redirect("/")
 
+# Example deleting files, not yet implemented for images but I am keeping this
+# here for a reference when I decide to implement deleting images.
+  # def delete_files(self):
+  #   self.response.write('Deleting files...\n')
+  #   for filename in self.tmp_filenames_to_clean_up:
+  #     self.response.write('Deleting file %s\n' % filename)
+  #     try:
+  #       gcs.delete(filename)
+  #     except gcs.NotFoundError:
+  #       pass
+
 # +-------------------+
 # | Environment Setup |
 # +-------------------+
@@ -789,7 +812,6 @@ app = webapp2.WSGIApplication([
     ('/delete_item_forever', DeleteItemForever),
     ('/undelete_item', UndeleteItem),
     ('/add_item', AddItem),
-    ('/view_image', ViewImage),
     ('/edit_item', EditItem),
     ('/enforce_auth', AuthHandler),
     ('/review_edits', ReviewEdits),
@@ -807,6 +829,7 @@ app = webapp2.WSGIApplication([
     ('/item_from_qr_code', ItemFromQRCode),
     # Lists
     ('/new_list', NewList),
+    ('/change_list_permissions', ChangeListPermissions),
     ('/delete_list', DeleteList),
     ('/view_lists', ViewLists),
     ('/view_list', ViewList),
