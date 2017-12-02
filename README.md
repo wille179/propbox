@@ -3,11 +3,18 @@ A web-based inventory management application for UAH using Google AppEngine and 
 
 *This is a fork from the development repository, which may not reflect the latest or final version of the project. It was last updated on 11/30/2017.*
 
+
 ## Propbox 1.0
 [Release Notes](Propbox_1.0_Release_Notes.pdf)
 
-## FAQ and install instructions
-[https://docs.google.com/document/d/150tjfQCVWj44AUbpQ-3HOCYtCxwx4G8quTkFvtUQkTU/edit?usp=sharing](https://docs.google.com/document/d/150tjfQCVWj44AUbpQ-3HOCYtCxwx4G8quTkFvtUQkTU/edit?usp=sharing)
+## Installation Instructions
+These instructions are for anyone from the UAH theater department who wants to use uah-propbox.appspot.com.
+
+1. Navigate to the [site](https://uah-propbox.appspot.com), no setup required.
+
+## Developer Installation Instructions
+These instructions are for someone who wants to help contribute to the propbox project.
+[Developer Guide](https://docs.google.com/document/d/150tjfQCVWj44AUbpQ-3HOCYtCxwx4G8quTkFvtUQkTU/edit?usp=sharing)
 
 ## Files
 
