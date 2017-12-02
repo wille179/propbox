@@ -1,7 +1,7 @@
 # PropBox
 A web-based inventory management application for UAH using Google AppEngine and Cloud Platform.
 
-*This is a fork from the development repository, which may not reflect the latest or final version of the project. It was last updated on 11/30/2017.*
+*This is a fork from the development repository, which may not reflect the latest or final version of the project. It was last updated on 12/1/2017.*
 
 
 ## Propbox 1.0
