@@ -269,44 +269,18 @@ def parseTags(tags_string):
     return tags_list
 
 # Filters viewable items based on selected boxes in MainPage
-def filterItems(item_name, item_type, item_condition, item_colors,
+def filterItems(user_id, item_name, item_type, item_condition, item_colors,
     item_color_grouping, costume_article, costume_size_string,
-    costume_size_number, tags_filter, tag_grouping):
-    # Check if costume or prop is selected individually
-    if (item_type == "Costume"):
-        if (len(costume_size_string) == 9):
-            costume_size_string.append("N/A")
-        elif (len(costume_size_string) == 0):
-            costume_size_string.append("N/A")
-            costume_size_string.append("XXS")
-            costume_size_string.append("XS")
-            costume_size_string.append("S")
-            costume_size_string.append("M")
-            costume_size_string.append("L")
-            costume_size_string.append("XL")
-            costume_size_string.append("XXL")
-            costume_size_string.append("XXXL")
+    min_size_num, max_size_num, exclude_unknown_size, tags_filter, tag_grouping, 
+    availability_filter, outdated=False):
+    query = Item.query()
+    query = query.filter(Item.outdated == outdated)
 
-        if (len(costume_article) == 0):
-            costume_article.append("Top")
-            costume_article.append("Bottom")
-            costume_article.append("Dress")
-            costume_article.append("Shoes")
-            costume_article.append("Hat")
-            costume_article.append("Coat/Jacket")
-            costume_article.append("Other")
+    # -------------------------
+    # Case by case search
+    # -------------------------
 
-        # Query separated into an if statement to diminish search time
-        if (len(costume_size_number) == 0 or len(costume_size_number) == 26):
-            query = Item.query(ndb.AND(Item.clothing_article_type.IN(costume_article),
-                Item.clothing_size_string.IN(costume_size_string))).order(Item.name)
-        else:
-            query = Item.query(ndb.AND(Item.clothing_article_type.IN(costume_article),
-                Item.clothing_size_string.IN(costume_size_string),
-                Item.clothing_size_num.IN(costume_size_number))).order(Item.name)
-    else:
-        query = Item.query().order(Item.name)
-
+    # Tags
     tags_list = parseTags(tags_filter)
     if len(tags_list) != 0:
         if tag_grouping == "inclusive":
@@ -315,16 +289,61 @@ def filterItems(item_name, item_type, item_condition, item_colors,
             for tag in tags_list:
                 query = query.filter(Item.tags == tag)
 
+    if availability_filter == 'checkedOutYou':
+        query = query.filter(Item.checked_out_by == user_id)
+
+    # Costume article type
+    if item_type == "Costume":
+        query = query.order(Item.clothing_size_num)
+        query = query.filter(ndb.OR(ndb.AND(Item.clothing_size_num >= int(min_size_num), Item.clothing_size_num <= int(max_size_num)), Item.clothing_size_num == -1))
+        if exclude_unknown_size:
+            query = query.filter(Item.clothing_size_num != -1)
+        if (costume_article):
+            query = query.filter(Item.clothing_article_type == costume_article)
+
+        if (costume_size_string):
+            query = query.filter(Item.clothing_size_string == costume_size_string)
+
+
+    # # -------------------------
+    # # Always explicitly search
+    # # -------------------------
+
+    # Item type
+    if item_type == "All":
+        query = query.filter(Item.item_type.IN(["Costume", "Prop"]))
+    elif item_type:
+        query = query.filter(Item.item_type == item_type)
+    
+
+    # Item Condition
+    if (len(item_condition) == 0):
+        item_condition = ["Good", "Fair", "Poor", "Being repaired" ]
+    query = query.filter(Item.condition.IN(item_condition))
+
+    
+    # Colors
     if len(item_colors) != 0:
-        query1 = query;
         if item_color_grouping == "inclusive":
-            query1 = query.filter(Item.item_color.IN(item_colors))
+            query = query.filter(Item.item_color.IN(item_colors))
         else:
             for color in item_colors:
-                query1 = query1.filter(Item.item_color == color)
-        return query1
+                query = query.filter(Item.item_color == color)
 
-    return query
+    if availability_filter == 'All':
+        query = query.filter(Item.checked_out.IN([True, False]))
+    elif availability_filter == 'checkedIn':
+        query = query.filter(Item.checked_out == False)
+    elif availability_filter:
+        query = query.filter(Item.checked_out == True)
+
+    results = query.order(Item.updated).fetch()
+    # Name
+    if item_name != '':
+        results = [x for x in results if x.name.lower().find(item_name.lower()) >= 0]
+
+
+    return results
 
 
 # TODO: actually remove rolled back and deleted items

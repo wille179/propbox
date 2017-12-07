@@ -115,6 +115,10 @@ class AddItem(webapp2.RequestHandler):
             article_type = self.request.get('article')
             costume_or_prop = self.request.get('item_type')
             costume_size_number = self.request.get('clothing_size_number')
+            if costume_size_number == "N/A":
+                costume_size_number = -1
+            else:
+                costume_size_number = int(costume_size_number)
             costume_size_word = self.request.get('clothing_size_string')
             tags_string = self.request.get('tags')
             # Override certain inputs due to costume and prop defaults
@@ -125,7 +129,7 @@ class AddItem(webapp2.RequestHandler):
             elif costume_or_prop == "Prop":
                 # Props do not have sizes or article types
                 article_type = "N/A"
-                costume_size_number = "N/A"
+                costume_size_number = -1
                 costume_size_word = "N/A"
 
             # tags is a string. Needs to parsed into an array
@@ -470,90 +474,53 @@ class MainPage(webapp2.RequestHandler):
     @auth.login_required
     def get(self):
         user = get_current_user(self.request)
-        #template = JINJA_ENVIRONMENT.get_template('templates/search_and_browse_items.html')
         template = JINJA_ENVIRONMENT.get_template('templates/index.html')
-        user = get_current_user(self.request);
         lists = List.query(ndb.OR(List.owner == user.key, List.public == True)).fetch()
-        try:
-            # Filter search items
-            item_name_filter = self.request.get('filter_by_name')
-            item_type_filter = self.request.get('filter_by_item_type')
-            item_condition_filter = self.request.get_all('filter_by_condition')
-            item_color_filter = self.request.get_all('filter_by_color')
-            item_color_grouping_filter = self.request.get('filter_by_color_grouping')
-            item_article_filter = self.request.get_all('filter_by_article')
-            costume_size_string_filter = self.request.get_all('filter_by_costume_size_string')
-            costume_size_number_filter = self.request.get_all('filter_by_costume_size_number')
-            tags_filter = self.request.get('filter_by_tags')
-            tags_grouping_filter = self.request.get('filter_by_tag_grouping')
-            availability_filter = self.request.get('filter_by_availability')
-            user_id = auth.get_user_id(self.request)
+        item_name_filter = self.request.get('filter_by_name')
+        item_type_filter = self.request.get('filter_by_item_type')
+        item_condition_filter = self.request.get_all('filter_by_condition')
+        item_color_filter = self.request.get_all('filter_by_color')
+        item_color_grouping_filter = self.request.get('filter_by_color_grouping')
+        item_article_filter = self.request.get('filter_by_article')
+        costume_size_string_filter = self.request.get('filter_by_costume_size_string')
+        costume_size_number_min = self.request.get('filter_by_costume_size_min')
+        costume_size_number_max = self.request.get('filter_by_costume_size_max')
+        if not costume_size_number_max:
+            costume_size_number_max = "26"
+        if not costume_size_number_min:
+            costume_size_number_min = "0"
 
+        exclude_unknown_size = self.request.get('excludeUnknownSize', '') == "true" 
+        tags_filter = self.request.get('filter_by_tags')
+        tags_grouping_filter = self.request.get('filter_by_tag_grouping')
+        availability_filter = self.request.get('filter_by_availability')
+        user_id = auth.get_user_id(self.request)
 
-            query = filterItems(
-                item_name_filter,
-                item_type_filter,
-                item_condition_filter,
-                item_color_filter,
-                item_color_grouping_filter,
-                item_article_filter,
-                costume_size_string_filter,
-                costume_size_number_filter,
-                tags_filter,
-                tags_grouping_filter)
+        items = filterItems(
+            user_id,
+            item_name_filter,
+            item_type_filter,
+            item_condition_filter,
+            item_color_filter,
+            item_color_grouping_filter,
+            item_article_filter,
+            costume_size_string_filter,
+            costume_size_number_min,
+            costume_size_number_max,
+            exclude_unknown_size,
+            tags_filter,
+            tags_grouping_filter,
+            availability_filter,
+            outdated=False)
 
-            items = query.fetch()
-            if (len(item_condition_filter) == 0):
-                item_condition_filter.append("Good")
-                item_condition_filter.append("Fair")
-                item_condition_filter.append("Poor")
-                item_condition_filter.append("Being repaired")
-
-            if (item_type_filter == "" or item_type_filter == None):
-                item_type_filter = "All"
-
-            if (len(item_color_filter) == 0):
-                item_color_filter.append("Red")
-                item_color_filter.append("Orange")
-                item_color_filter.append("Yellow")
-                item_color_filter.append("Green")
-                item_color_filter.append("Cyan")
-                item_color_filter.append("Blue")
-                item_color_filter.append("Indigo")
-                item_color_filter.append("Purple")
-                item_color_filter.append("Pink")
-                item_color_filter.append("Brown")
-                item_color_filter.append("Black")
-                item_color_filter.append("White")
-                item_color_filter.append("Gray")
-
-            # send to display
-            page = template.render({
-                'lists': lists,
-                'user': user,
-                'items': items,
-                'item_type_filter': item_type_filter,
-                'item_name_filter': item_name_filter,
-                'item_condition_filter': item_condition_filter,
-                'item_color_filter': item_color_filter,
-                'availability_filter': availability_filter,
-                'user_id': user_id})
-            page = page.encode('utf-8')
-            self.response.write(validateHTML(page))
-
-        # TODO: make this more specific OR preferably remove try/except infrastructure
-        except:
-            # first time opening or item has been added
-            query = Item.query()
-            items = query.fetch()
-            # logging.info(items)
-            page = template.render({
-                'lists': lists,
-                'user': user,
-                'items': items,
-                'item_type_filter': item_type_filter})
-            page = page.encode('utf-8')
-            self.response.write(validateHTML(page))
+        # send to display
+        page = template.render({
+            'lists': lists,
+            'user': user,
+            'items': items,
+            'user_id': user_id})
+        page = page.encode('utf-8')
+        self.response.write(validateHTML(page))
 
 
 class ManageUsers(webapp2.RequestHandler):
