@@ -6,6 +6,12 @@ A web-based inventory management application for UAH using Google AppEngine and 
 ## Propbox 1.0
 [Release Notes](Propbox_1.0_Release_Notes.pdf)
 
+## Development Cycle Demo Videos
+* [Demo 1](https://www.youtube.com/watch?v=WzrQXxxZmw4)
+* [Demo 2](https://www.youtube.com/watch?v=05PVDm8bSlo)
+* [Demo 3](https://www.youtube.com/watch?v=HzJdMjkLOuA)
+* [Final Presentation](https://youtu.be/8uIj-iSuMgg?t=4s)
+
 ## Installation Instructions
 These instructions are for anyone from the UAH theater department who wants to use uah-propbox.appspot.com.
 
@@ -35,27 +41,4 @@ These instructions are for someone who wants to help contribute to the propbox p
 | stylesheets/   | This folder contains CSS files.                         |
 | templates/     | This folder contains HTML templates.                    |
 | static/        | This folder contains any static files that are not js,  |
-|                | css, or jinja templates                                 |
-
-## Acceptance Criteria
-A code issue is acceptable/complete and can be closed when:
- |-------------------------------------------------------------|
- |The description's results section occur                      |
- |The result only occurs when the given section is valid       |
- |The result only occurs when the When section occurs in order |
- |Edge cases are covered properly and within reason            |
- |The change is pushed to the master branch on GitHub          |
-
-Cards in ZenHub apply here.
-
-## Done Done Criteria
-A feature is officially resolved permanently when:
- |-------------------------------------------------------------|
- |Internal documentation is complete                           |
- |The code is well tested for edge cases                       |
- |UI is integrated successfully                                |
- |Group members agree it is done done                          |
- 
- in addition to acceptance criteria being met.
- 
- Cards in ZenHub DO NOT apply here.
+|                | css, or jinja templates                                 
